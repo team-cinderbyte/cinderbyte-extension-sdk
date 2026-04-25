@@ -1,6 +1,6 @@
 {
   "name": "cinderbyte-ext-sdk",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "SDK and CLI for building Cinderbyte extensions",
   "type": "module",
   "main": "./runtime/api.js",
