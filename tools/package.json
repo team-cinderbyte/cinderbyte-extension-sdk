@@ -1,0 +1,11 @@
+{
+  "type": "module",
+  "scripts": {
+    "build:ext": "node tools/ext-pack.js",
+    "build:all": "node tools/ext-builder.js"
+  },
+  "dependencies": {
+    "archiver": "^6",
+    "esbuild": "^0.20"
+  }
+}
