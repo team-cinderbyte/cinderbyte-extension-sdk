@@ -4,7 +4,11 @@ const [, , command, ...args] = process.argv;
 
 switch (command) {
   case "init":
-    await import("./commands/init.js").then((m) => m.default(args));
+    (await import("./commands/init.js")).default();
+    break;
+
+  case "create":
+    (await import("./commands/create.js")).default();
     break;
 
   case "build":
@@ -30,3 +34,15 @@ Commands:
   cbe clean          Clean dist folder
 `);
 }
+
+process.on("uncaughtException", (err) => {
+  console.error("\n Uncaught Error:");
+  console.error(err.message);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.error("\n Promise Rejection:");
+  console.error(err);
+  process.exit(1);
+});

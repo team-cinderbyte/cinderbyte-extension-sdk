@@ -4,36 +4,57 @@ import esbuild from "esbuild";
 import archiver from "archiver";
 
 export async function packExtension(dir) {
-  const manifest = JSON.parse(fs.readFileSync(path.join(dir, "manifest.json")));
+  try {
+    const manifestPath = path.join(dir, "manifest.json");
 
-  const distDir = path.join(dir, "dist");
-  fs.mkdirSync(distDir, { recursive: true });
+    if (!fs.existsSync(manifestPath)) {
+      throw new Error(`Missing manifest.json in ${dir}`);
+    }
 
-  await esbuild.build({
-    entryPoints: [path.join(dir, manifest.entry)],
-    bundle: true,
-    outfile: path.join(distDir, "main.js"),
-    platform: "browser",
-  });
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
 
-  fs.writeFileSync(
-    path.join(distDir, "manifest.json"),
-    JSON.stringify({
-      id: manifest.id,
-      version: manifest.version,
-      entry: "main.js",
-    }),
-  );
+    const distDir = path.join(dir, "dist");
 
-  const outName = `${manifest.id}-${manifest.version}.ext`;
+    if (!fs.existsSync(distDir)) {
+      fs.mkdirSync(distDir, { recursive: true });
+    }
 
-  const output = fs.createWriteStream(outName);
-  const archive = archiver("zip");
+    await esbuild.build({
+      entryPoints: [path.join(dir, manifest.entry)],
+      bundle: true,
+      platform: "browser",
+      target: "es2020",
+      minify: true,
+      sourcemap: false,
+      outfile: path.join(distDir, "main.js"),
+    });
 
-  archive.pipe(output);
-  archive.directory(distDir, false);
+    fs.writeFileSync(
+      path.join(distDir, "manifest.json"),
+      JSON.stringify(
+        {
+          id: manifest.id,
+          version: manifest.version,
+          entry: "main.js",
+        },
+        null,
+        2,
+      ),
+    );
 
-  await archive.finalize();
+    const outName = `${manifest.id}-${manifest.version}.ext`;
 
-  return { manifest, file: outName };
+    const output = fs.createWriteStream(outName);
+    const archive = archiver("zip");
+
+    archive.pipe(output);
+    archive.directory(distDir, false);
+
+    await archive.finalize();
+
+    return { manifest, file: outName };
+  } catch (err) {
+    console.error("❌ Pack failed:", err.message);
+    process.exit(1);
+  }
 }

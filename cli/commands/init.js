@@ -1,33 +1,55 @@
 import fs from "fs";
 import path from "path";
+import readline from "readline";
 
-export default function () {
-  const target = path.join(process.cwd(), "extensions/my-extension");
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
 
-  fs.mkdirSync(target, { recursive: true });
-  fs.mkdirSync(path.join(target, "src"));
+const ask = (q) => new Promise((res) => rl.question(q, res));
 
-  fs.writeFileSync(
-    path.join(target, "manifest.json"),
-    JSON.stringify(
-      {
-        id: "my-extension",
-        name: "My Extension",
-        version: "1.0.0",
-        type: "manga",
-        entry: "src/index.ts",
-      },
-      null,
-      2,
-    ),
-  );
+export default async function () {
+  try {
+    console.log("\n🧩 Cinderbyte Repo Setup Wizard\n");
 
-  fs.writeFileSync(
-    path.join(target, "src/index.ts"),
-    `export async function search(query: string) {
-  return [];
-}`,
-  );
+    const name = await ask("Repo name: ");
+    const author = await ask("Author: ");
+    const description = await ask("Description: ");
+    const version = await ask("Version (1.0.0): ");
 
-  console.log("Extension created at extensions/my-extension");
+    // ensure structure
+    const root = process.cwd();
+    const extDir = path.join(root, "extensions");
+
+    if (!fs.existsSync(extDir)) {
+      fs.mkdirSync(extDir, { recursive: true });
+      console.log("📁 Created extensions/ folder");
+    }
+
+    const repoConfigPath = path.join(root, "repo.config.json");
+
+    fs.writeFileSync(
+      repoConfigPath,
+      JSON.stringify(
+        {
+          name: name || "Cinderbyte Repo",
+          author: author || "unknown",
+          description: description || "",
+          version: version || "1.0.0",
+        },
+        null,
+        2,
+      ),
+    );
+
+    console.log("\n✅ Repo initialized successfully");
+    console.log("👉 Next: cbe create <extension>");
+
+    rl.close();
+  } catch (err) {
+    console.error("❌ Setup failed:", err.message);
+    rl.close();
+    process.exit(1);
+  }
 }
