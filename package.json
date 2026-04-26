@@ -1,52 +1,15 @@
 {
   "name": "cinderbyte-ext-sdk",
-  "version": "1.0.4",
-  "description": "SDK and CLI for building Cinderbyte extensions",
-  "type": "module",
-  "main": "./runtime/api.js",
-  "types": "./runtime/types.d.ts",
+  "version": "2.0.0",
+  "description": "Functional Sidecar SDK for Cinderbyte",
+  "main": "index.js",
   "bin": {
-    "cbe": "cli/index.js"
+    "cbe": "./index.js"
   },
-  "exports": {
-    ".": {
-      "import": "./runtime/api.js",
-      "types": "./runtime/types.d.ts"
-    },
-    "./api": {
-      "import": "./runtime/api.js"
-    },
-    "./types": {
-      "types": "./runtime/types.d.ts"
-    },
-    "./validator": {
-      "import": "./validator/manifest.js"
-    }
-  },
-  "files": [
-    "cli",
-    "core",
-    "runtime",
-    "validator",
-    "utils",
-    "templates"
-  ],
-  "scripts": {
-    "dev": "node cli/index.js"
-  },
-  "keywords": [
-    "cinderbyte",
-    "extensions",
-    "sdk",
-    "cli",
-    "plugin-system"
-  ],
-  "license": "MIT",
   "dependencies": {
-    "archiver": "^6.0.0",
-    "esbuild": "^0.20.0"
+    "archiver": "^6.0.2"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=18.0.0"
   }
 }

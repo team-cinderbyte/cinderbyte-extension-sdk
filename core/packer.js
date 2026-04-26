@@ -1,60 +1,64 @@
-import fs from "fs";
-import path from "path";
-import esbuild from "esbuild";
-import archiver from "archiver";
+const fs = require("fs");
+const path = require("path");
+const archiver = require("archiver");
 
-export async function packExtension(dir) {
-  try {
-    const manifestPath = path.join(dir, "manifest.json");
-
-    if (!fs.existsSync(manifestPath)) {
-      throw new Error(`Missing manifest.json in ${dir}`);
-    }
-
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
-
-    const distDir = path.join(dir, "dist");
-
-    if (!fs.existsSync(distDir)) {
-      fs.mkdirSync(distDir, { recursive: true });
-    }
-
-    await esbuild.build({
-      entryPoints: [path.join(dir, manifest.entry)],
-      bundle: true,
-      platform: "browser",
-      target: "es2020",
-      minify: true,
-      sourcemap: false,
-      outfile: path.join(distDir, "main.js"),
+/**
+ * The Packer Engine
+ * @param {string} sourceDir - The path to the extension folder (containing main.js, etc.)
+ * @param {string} outputPath - The destination path for the .cbe file
+ */
+exports.pack = (sourceDir, outputPath) => {
+  return new Promise((resolve, reject) => {
+    // Create a file to stream archive data to.
+    const output = fs.createWriteStream(outputPath);
+    const archive = archiver("zip", {
+      zlib: { level: 9 }, // Maximum compression
     });
 
-    fs.writeFileSync(
-      path.join(distDir, "manifest.json"),
-      JSON.stringify(
-        {
-          id: manifest.id,
-          version: manifest.version,
-          entry: "main.js",
-        },
-        null,
-        2,
-      ),
-    );
+    // Listen for all archive data to be written
+    output.on("close", () => {
+      // console.log(`Finished packing: ${archive.pointer()} total bytes`);
+      resolve();
+    });
 
-    const outName = `${manifest.id}-${manifest.version}.ext`;
+    archive.on("warning", (err) => {
+      if (err.code === "ENOENT") console.warn("⚠️ Warning:", err);
+      else reject(err);
+    });
 
-    const output = fs.createWriteStream(outName);
-    const archive = archiver("zip");
+    archive.on("error", (err) => {
+      reject(err);
+    });
 
+    // Pipe archive data to the file
     archive.pipe(output);
-    archive.directory(distDir, false);
 
-    await archive.finalize();
+    // 1. Pack User Files
+    // We look specifically for the files required by the Cinderbyte spec
+    const requiredFiles = ["main.js", "manifest.json", "logo.png"];
 
-    return { manifest, file: outName };
-  } catch (err) {
-    console.error("❌ Pack failed:", err.message);
-    process.exit(1);
-  }
-}
+    requiredFiles.forEach((fileName) => {
+      const filePath = path.join(sourceDir, fileName);
+      if (fs.existsSync(filePath)) {
+        archive.file(filePath, { name: fileName });
+      }
+    });
+
+    // 2. Inject the Sidecar Runtime (host.js)
+    // This is what Flutter actually executes. It's stored in /runtime/host.js
+    const hostTemplatePath = path.join(__dirname, "../runtime/host.js");
+
+    if (fs.existsSync(hostTemplatePath)) {
+      archive.file(hostTemplatePath, { name: "host.js" });
+    } else {
+      reject(
+        new Error(
+          "Critical Error: Sidecar Host template (runtime/host.js) is missing.",
+        ),
+      );
+    }
+
+    // Finalize the archive (this is async)
+    archive.finalize();
+  });
+};
